@@ -28,12 +28,10 @@ import (
 // subnetCmd represents the subnet command
 var subnetCmd = &cobra.Command{
 	Use:   "subnet",
-	Short: "Subnetting tools and generators for IP networks",
-	Long: `Subnetting tools and generators for IP networks.
+	Short: "Subnetting tools for IP networks",
+	Long: `Subnetting tools for IP networks.
 
-The subnet command provides a comprehensive list of subnets and detailed
-information about a specific subnet. It offers a professional and efficient
-way to analyze IP networks and perform subnetting tasks.`,
+The subnet command provides tools for generating and manipulating subnets.`,
 	SilenceUsage: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
@@ -42,14 +40,4 @@ way to analyze IP networks and perform subnetting tasks.`,
 
 func init() {
 	rootCmd.AddCommand(subnetCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// subnetCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// subnetCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

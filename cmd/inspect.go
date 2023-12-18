@@ -35,7 +35,7 @@ import (
 // inspectCmd represents the inspect command
 var inspectCmd = &cobra.Command{
 	Use:   "inspect <ip address>",
-	Short: "Inspect an IP address in any format.",
+	Short: "Take a closer look at an IP address",
 	Long: `Inspect an IP address in any format and print detailed information about
 the address. If no subnet mask is specified, a subnet mask of 24 bits is assumed.
 
@@ -45,25 +45,31 @@ Examples:
   iptool inspect 10.0.0.1 255.255.255.0`,
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// If no arguments are provided, print a short help text
+		if len(args) == 0 {
+			cmd.Help()
+			return nil
+		}
 		input := strings.Join(args, " ")
 		return inspectAction(os.Stdout, input)
 	},
 }
 
 func inspectAction(out io.Writer, s string) error {
-	templateText := `Network details: {{.NetworkDetails}} ({{.NetworkSize}} addresses)
+	templateText := `Address Details:
+ IPv4 address       : {{.HostAddress}}
+ Network mask       : {{.NetworkMask}}
 
-Address Details
----------------
-IPv4 address       : {{.HostAddress}} {{.NetworkMask}}
-Network address    : {{.NetworkAddress}}
-Broadcast address  : {{.BroadcastAddress}}
-Usable hosts	   : {{.FirstHost}} - {{.LastHost}} ({{.UsableHosts}} hosts)
+Netmask Details:
+ Network mask       : {{.NetworkMask}}
+ Network bits       : {{.NetworkMaskBits}}
+ Wildcard mask      : {{.WildcardMask}}
 
-Network Mask
-------------
-Network mask         : {{.NetworkMask}}
-Network mask (bits)  : {{.NetworkMaskBits}}
+Network Details:
+ CIDR notation      : {{.NetworkDetails}} ({{.NetworkSize}} addresses):
+ Network address    : {{.NetworkAddress}}
+ Broadcast address  : {{.BroadcastAddress}}
+ Usable hosts       : {{.FirstHost}} - {{.LastHost}} ({{.UsableHosts}} hosts)
 `
 
 	// Check if the input is an IPv4 or IPv6 address
@@ -86,6 +92,7 @@ Network mask (bits)  : {{.NetworkMaskBits}}
 			LastHost         string
 			NetworkSize      string
 			NetworkMaskBits  string
+			WildcardMask     string
 		}{
 			NetworkMask:      ipv4.Netmask(),
 			NetworkDetails:   fmt.Sprintf("%s/%d", ipv4.Network(), ipv4.PrefixLength()),
@@ -97,6 +104,7 @@ Network mask (bits)  : {{.NetworkMaskBits}}
 			LastHost:         ipv4.LastHost(),
 			NetworkSize:      fmt.Sprintf("%d", ipv4.NetworkSize()),
 			NetworkMaskBits:  fmt.Sprintf("%d", ipv4.PrefixLength()),
+			WildcardMask:     ipv4.Wildcard(),
 		}
 
 		// Create a new template and parse the template text
@@ -117,14 +125,4 @@ Network mask (bits)  : {{.NetworkMaskBits}}
 
 func init() {
 	rootCmd.AddCommand(inspectCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// inspectCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// inspectCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

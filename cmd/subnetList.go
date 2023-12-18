@@ -38,11 +38,11 @@ import (
 // subnetListCmd represents the subnetList command
 var subnetListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "Print a list of IPv4 subnets",
-	Long: `Print a list of IPv4 subnets.
+	Short: "Display a comprehensive IPv4 subnet mask list",
+	Long: `Display a comprehensive IPv4 subnet mask list, ranging from 0 to 32 bits.
 
 Filter the list by specifying one or more prefix lengths (integers
-between 0 and 32) as an argument.
+between 0 and 32) as an argument, separated by commas.
 
 Examples:
   iptool subnet list
@@ -72,7 +72,7 @@ func subnetListAction(out io.Writer, s string) error {
 
 	// If prefixList is empty, add all prefix lengths (0-32)
 	if len(prefixList) == 0 {
-		for i := 0; i <= 32; i++ {
+		for i := 32; i >= 0; i-- {
 			prefixList = append(prefixList, i)
 		}
 	}

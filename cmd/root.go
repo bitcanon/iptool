@@ -34,10 +34,10 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Version: "1.0.0-rc.1",
+	Version: "1.0.0",
 	Use:     "iptool",
-	Short:   "Simplify IP address and network calculations on the command line",
-	Long: `Simplify IP address and network calculations on the command line.
+	Short:   "Simplify IP address and subnet tasks on the command line",
+	Long: `Simplify IP address and subnet tasks on the command line.
 
 The iptool is useful when detailed information about an IP address or various
 subnetting information is required. The tool takes input from the user,
@@ -66,9 +66,9 @@ func init() {
 	// Set default config file path for the flag help text
 	var defaultConfigPath string
 	if runtime.GOOS == "windows" {
-		defaultConfigPath = "%USERPROFILE%\\.mactool.yaml"
+		defaultConfigPath = "%USERPROFILE%\\.iptool.yaml"
 	} else {
-		defaultConfigPath = "~/.mactool.yaml"
+		defaultConfigPath = "~/.iptool.yaml"
 	}
 
 	// Add flag for custom config file path
