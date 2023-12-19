@@ -66,7 +66,7 @@ Netmask Details:
  Wildcard mask      : {{.WildcardMask}}
 
 Network Details:
- CIDR notation      : {{.NetworkDetails}} ({{.NetworkSize}} addresses):
+ CIDR notation      : {{.NetworkDetails}} ({{.NetworkSize}} addresses)
  Network address    : {{.NetworkAddress}}
  Broadcast address  : {{.BroadcastAddress}}
  Usable hosts       : {{.FirstHost}} - {{.LastHost}} ({{.UsableHosts}} hosts)
