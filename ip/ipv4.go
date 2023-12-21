@@ -369,3 +369,60 @@ func ParseIPv4FromHex(hexIP string) (string, error) {
 
 	return ip.String(), nil
 }
+
+func IPv4ToBinary(ipStr string) string {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return ""
+	}
+
+	ip = ip.To4()
+	if ip == nil {
+		return ""
+	}
+
+	binaryIP := make([]string, 4)
+	for i, byteValue := range ip {
+		binaryIP[i] = fmt.Sprintf("%08b", byteValue)
+	}
+
+	return strings.Join(binaryIP, ".")
+}
+
+func IPv4ToHex(ipStr string) string {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return ""
+	}
+
+	ip = ip.To4()
+	if ip == nil {
+		return ""
+	}
+
+	hexIP := ""
+	for _, byteValue := range ip {
+		hexIP += fmt.Sprintf("%02x", byteValue)
+	}
+
+	return hexIP
+}
+
+func IPv4ToDecimal(ipStr string) string {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return ""
+	}
+
+	ip = ip.To4()
+	if ip == nil {
+		return ""
+	}
+
+	decimalIP := 0
+	for _, byteValue := range ip {
+		decimalIP = decimalIP*256 + int(byteValue)
+	}
+
+	return fmt.Sprintf("%d", decimalIP)
+}

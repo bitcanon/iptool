@@ -30,6 +30,7 @@ import (
 
 	"github.com/bitcanon/iptool/ip"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // inspectCmd represents the inspect command
@@ -45,8 +46,7 @@ Examples:
   iptool inspect 10.0.0.1 255.255.255.0
   iptool inspect 0xc0800d25
   iptool inspect c0800d25/22
-  iptool inspect c0800d25 fffffe00
-  `,
+  iptool inspect c0800d25 fffffe00`,
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// If no arguments are provided, print a short help text
@@ -60,8 +60,7 @@ Examples:
 	},
 }
 
-func inspectAction(out io.Writer, s string) error {
-	templateText := `Address Details:
+const simpleTemplate = `Address Details:
  IPv4 address       : {{.HostAddress}}
  Network mask       : {{.NetworkMask}}
 
@@ -77,6 +76,44 @@ Network Details:
  Usable hosts       : {{.FirstHost}} - {{.LastHost}} ({{.UsableHosts}} hosts)
 `
 
+const advancedTemplate = `Address Details:
+ IPv4 address       : {{.HostAddress}}
+ Network mask       : {{.NetworkMask}}
+
+Netmask Details:
+ Network mask       : {{.NetworkMask}}
+ Network bits       : {{.NetworkMaskBits}}
+ Wildcard mask      : {{.WildcardMask}}
+
+Network Details:
+ CIDR notation      : {{.NetworkDetails}} ({{.NetworkSize}} addresses)
+ Network address    : {{.NetworkAddress}}
+ Broadcast address  : {{.BroadcastAddress}}
+ Usable hosts       : {{.FirstHost}} - {{.LastHost}} ({{.UsableHosts}} hosts)
+
+Binary Notation:
+ IPv4 address       : {{.HostAddressBinary}} ({{.HostAddress}})
+ Network mask       : {{.NetworkMaskBinary}} ({{.NetworkMask}})
+ Network address    : {{.NetworkAddressBinary}} ({{.NetworkAddress}})
+ Broadcast address  : {{.BroadcastAddressBinary}} ({{.BroadcastAddress}})
+ Wildcard mask      : {{.WildcardMaskBinary}} ({{.WildcardMask}})
+
+Hexadecimal Notation:
+ IPv4 address       : {{.HostAddressHex}} ({{.HostAddress}})
+ Network mask       : {{.NetworkMaskHex}} ({{.NetworkMask}})
+ Network address    : {{.NetworkAddressHex}} ({{.NetworkAddress}})
+ Broadcast address  : {{.BroadcastAddressHex}} ({{.BroadcastAddress}})
+ Wildcard mask      : {{.WildcardMaskHex}} ({{.WildcardMask}})
+
+Decimal Notation:
+ IPv4 address       : {{printf "%10s" .HostAddressDecimal}} ({{.HostAddress}})
+ Network mask       : {{printf "%10s" .NetworkMaskDecimal}} ({{.NetworkMask}})
+ Network address    : {{printf "%10s" .NetworkAddressDecimal}} ({{.NetworkAddress}})
+ Broadcast address  : {{printf "%10s" .BroadcastAddressDecimal}} ({{.BroadcastAddress}})
+ Wildcard mask      : {{printf "%10s" .WildcardMaskDecimal}} ({{.WildcardMask}})
+`
+
+func inspectAction(out io.Writer, s string) error {
 	if strings.Contains(s, ":") {
 		// If there is a colon in the input string, assume it is an IPv6 address
 		return fmt.Errorf("support for IPv6 addresses is not implemented yet")
@@ -89,33 +126,69 @@ Network Details:
 
 		// Create a data structure with the values to fill in the template placeholders
 		data := struct {
-			NetworkMask      string
-			NetworkDetails   string
-			HostAddress      string
-			NetworkAddress   string
-			BroadcastAddress string
-			UsableHosts      string
-			FirstHost        string
-			LastHost         string
-			NetworkSize      string
-			NetworkMaskBits  string
-			WildcardMask     string
+			NetworkMask             string
+			NetworkMaskBinary       string
+			NetworkMaskHex          string
+			NetworkMaskDecimal      string
+			NetworkDetails          string
+			HostAddress             string
+			HostAddressBinary       string
+			HostAddressHex          string
+			HostAddressDecimal      string
+			NetworkAddress          string
+			NetworkAddressBinary    string
+			NetworkAddressHex       string
+			NetworkAddressDecimal   string
+			BroadcastAddress        string
+			BroadcastAddressBinary  string
+			BroadcastAddressHex     string
+			BroadcastAddressDecimal string
+			UsableHosts             string
+			FirstHost               string
+			LastHost                string
+			NetworkSize             string
+			NetworkMaskBits         string
+			WildcardMask            string
+			WildcardMaskBinary      string
+			WildcardMaskHex         string
+			WildcardMaskDecimal     string
 		}{
-			NetworkMask:      ipv4.Netmask(),
-			NetworkDetails:   fmt.Sprintf("%s/%d", ipv4.Network(), ipv4.PrefixLength()),
-			HostAddress:      ipv4.Address(),
-			NetworkAddress:   ipv4.Network(),
-			BroadcastAddress: ipv4.Broadcast(),
-			UsableHosts:      fmt.Sprintf("%d", ipv4.UsableHosts()),
-			FirstHost:        ipv4.FirstHost(),
-			LastHost:         ipv4.LastHost(),
-			NetworkSize:      fmt.Sprintf("%d", ipv4.NetworkSize()),
-			NetworkMaskBits:  fmt.Sprintf("%d", ipv4.PrefixLength()),
-			WildcardMask:     ipv4.Wildcard(),
+			NetworkMask:             ipv4.Netmask(),
+			NetworkMaskBinary:       ip.IPv4ToBinary(ipv4.Netmask()),
+			NetworkMaskHex:          ip.IPv4ToHex(ipv4.Netmask()),
+			NetworkMaskDecimal:      ip.IPv4ToDecimal(ipv4.Netmask()),
+			NetworkDetails:          fmt.Sprintf("%s/%d", ipv4.Network(), ipv4.PrefixLength()),
+			HostAddress:             ipv4.Address(),
+			HostAddressBinary:       ip.IPv4ToBinary(ipv4.Address()),
+			HostAddressHex:          ip.IPv4ToHex(ipv4.Address()),
+			HostAddressDecimal:      ip.IPv4ToDecimal(ipv4.Address()),
+			NetworkAddress:          ipv4.Network(),
+			NetworkAddressBinary:    ip.IPv4ToBinary(ipv4.Network()),
+			NetworkAddressHex:       ip.IPv4ToHex(ipv4.Network()),
+			NetworkAddressDecimal:   ip.IPv4ToDecimal(ipv4.Network()),
+			BroadcastAddress:        ipv4.Broadcast(),
+			BroadcastAddressBinary:  ip.IPv4ToBinary(ipv4.Broadcast()),
+			BroadcastAddressHex:     ip.IPv4ToHex(ipv4.Broadcast()),
+			BroadcastAddressDecimal: ip.IPv4ToDecimal(ipv4.Broadcast()),
+			UsableHosts:             fmt.Sprintf("%d", ipv4.UsableHosts()),
+			FirstHost:               ipv4.FirstHost(),
+			LastHost:                ipv4.LastHost(),
+			NetworkSize:             fmt.Sprintf("%d", ipv4.NetworkSize()),
+			NetworkMaskBits:         fmt.Sprintf("%d", ipv4.PrefixLength()),
+			WildcardMask:            ipv4.Wildcard(),
+			WildcardMaskBinary:      ip.IPv4ToBinary(ipv4.Wildcard()),
+			WildcardMaskHex:         ip.IPv4ToHex(ipv4.Wildcard()),
+			WildcardMaskDecimal:     ip.IPv4ToDecimal(ipv4.Wildcard()),
+		}
+
+		// If the --detailed flag is set, use the advanced template
+		selectedTemplate := simpleTemplate
+		if viper.GetBool("inspect.detailed") {
+			selectedTemplate = advancedTemplate
 		}
 
 		// Create a new template and parse the template text
-		tmpl := template.Must(template.New("networkDetails").Parse(templateText))
+		tmpl := template.Must(template.New("networkDetails").Parse(selectedTemplate))
 
 		// Execute the template with the data and write the result to an output
 		err = tmpl.Execute(os.Stdout, data)
@@ -128,5 +201,10 @@ Network Details:
 }
 
 func init() {
+	// Register the inspect command with the root command
 	rootCmd.AddCommand(inspectCmd)
+
+	// Enable the --detailed flag for the inspect command
+	inspectCmd.Flags().BoolP("detailed", "d", false, "display comprehensive IP address information")
+	viper.BindPFlag("inspect.detailed", inspectCmd.Flags().Lookup("detailed"))
 }
