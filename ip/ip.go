@@ -39,7 +39,7 @@ func ParseIP(s string) (net.IP, *net.IPNet, error) {
 	return ip, ipnet, nil
 }
 
-// Function that checks if an IP address is an IPv4 address.
+// Function that checks if an IP address is an IPv4 address
 func IsIPv4(s string) bool {
 	ipv4 := net.ParseIP(s)
 	if ipv4 != nil && strings.Contains(s, ".") {
@@ -48,7 +48,7 @@ func IsIPv4(s string) bool {
 	return false
 }
 
-// IsIPv6 is a function that checks if an IP address is an IPv6 address.
+// IsIPv6 is a function that checks if an IP address is an IPv6 address
 func IsIPv6(s string) bool {
 	ipv6 := net.ParseIP(s)
 	if ipv6 != nil && strings.Contains(s, ":") {
