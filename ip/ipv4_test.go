@@ -28,7 +28,7 @@ func TestParseIPv4(t *testing.T) {
 			expectedCIDR:     "1.2.3.4/24",
 		},
 		{
-			name:             "IPv4AddresInCIDRNotation",
+			name:             "IPv4AddresInCIDRNotation2",
 			input:            "1.2.3.4/22",
 			expectedIP:       "1.2.3.4",
 			expectedMask:     "255.255.252.0",
@@ -53,6 +53,42 @@ func TestParseIPv4(t *testing.T) {
 			expectedMaskBits: 24,
 			expectedNet:      "1.2.3.0",
 			expectedCIDR:     "1.2.3.4/24",
+		},
+		{
+			name:             "IPv4AddresInCIDRNotationHex",
+			input:            "0xc0a800fe/24",
+			expectedIP:       "192.168.0.254",
+			expectedMask:     "255.255.255.0",
+			expectedMaskBits: 24,
+			expectedNet:      "192.168.0.0",
+			expectedCIDR:     "192.168.0.254/24",
+		},
+		{
+			name:             "IPv4AddressWithoutNetmaskHex",
+			input:            "C0A800FE",
+			expectedIP:       "192.168.0.254",
+			expectedMask:     "255.255.255.0",
+			expectedMaskBits: 24,
+			expectedNet:      "192.168.0.0",
+			expectedCIDR:     "192.168.0.254/24",
+		},
+		{
+			name:             "IPv4AddressWithNetmaskHex",
+			input:            "0xc0a80001 ffffff00",
+			expectedIP:       "192.168.0.1",
+			expectedMask:     "255.255.255.0",
+			expectedMaskBits: 24,
+			expectedNet:      "192.168.0.0",
+			expectedCIDR:     "192.168.0.1/24",
+		},
+		{
+			name:             "IPv4AddressWithNetmaskHex",
+			input:            "0xc0a80001 fffffe00",
+			expectedIP:       "192.168.0.1",
+			expectedMask:     "255.255.254.0",
+			expectedMaskBits: 23,
+			expectedNet:      "192.168.0.0",
+			expectedCIDR:     "192.168.0.1/23",
 		},
 		{
 			name:             "IPv4DefaultRoute",
@@ -302,6 +338,76 @@ func TestIPv4NetworkSize(t *testing.T) {
 			}
 			if ipv4.NetworkSize() != tc.expected {
 				t.Errorf("expected string %d, got %d", tc.expected, ipv4.NetworkSize())
+			}
+		})
+	}
+}
+
+func TestIsIPv4Hex(t *testing.T) {
+	// Setup test cases
+	testCases := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{name: "IPv4Address1", input: "10.0.0.1", expected: false},
+		{name: "IPv4Address2", input: "10.00.00.01", expected: false},
+		{name: "IPv4AddressHex1", input: "0x10000001", expected: true},
+		{name: "IPv4AddressHex2", input: "10000001", expected: true},
+		{name: "IPv4AddressHex3", input: "0x0a000001", expected: true},
+		{name: "IPv4AddressHex4", input: "0y0a000001", expected: false},
+		{name: "IPv4AddressHex5", input: "0a000001", expected: true},
+		{name: "IPv4AddressHexInvalid", input: "0a00000r", expected: false},
+		{name: "IPv4AddressHexUpper", input: "0A0B0C01", expected: true},
+		{name: "IPv4AddressHexMixed", input: "0A0b0C01", expected: true},
+		{name: "IPv4AddressHexMixed", input: "0A0b0C01 ", expected: false},
+		{name: "IPv4AddressHexMixed", input: " 0A0b0C01", expected: false},
+		{name: "IPv4AddressHexMixed2", input: "0A0b0C0r", expected: false},
+		{name: "IPv4AddressHexMixed3", input: "0A0b0C0", expected: false},
+		{name: "IPv4AddressHexMixed4", input: "0A0b0C0 ", expected: false},
+		{name: "IPv4AddressHexMixed5", input: " 0A0b0C0", expected: false},
+	}
+
+	// Run test cases
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if ip.IsIPv4Hex(tc.input) != tc.expected {
+				t.Errorf("expected %t, got %t", tc.expected, ip.IsIPv4Hex(tc.input))
+			}
+		})
+	}
+}
+
+func TestParseIPv4FromHex(t *testing.T) {
+	// Setup test cases
+	testCases := []struct {
+		name        string
+		input       string
+		expected    string
+		expectedErr error
+	}{
+		{name: "IPv4AddressHex1", input: "0x10000001", expected: "16.0.0.1", expectedErr: nil},
+		{name: "IPv4AddressHex2", input: "10000001", expected: "16.0.0.1", expectedErr: nil},
+		{name: "IPv4AddressHex3", input: "0x0a000001", expected: "10.0.0.1", expectedErr: nil},
+		{name: "IPv4AddressHex4", input: "0xffffff00", expected: "255.255.255.0", expectedErr: nil},
+		{name: "IPv4AddressHex4", input: "0xfffff800", expected: "255.255.248.0", expectedErr: nil},
+		{name: "IPv4AddressHex5", input: "0xabcdefgh", expected: "", expectedErr: ip.ErrInvalidHexAddress},
+		{name: "IPv4AddressHex6", input: "nothexyo", expected: "", expectedErr: ip.ErrInvalidHexAddress},
+		{name: "IPv4AddressHexUpper", input: "0A0B0C01", expected: "10.11.12.1", expectedErr: nil},
+		{name: "IPv4AddressHexMixed", input: "0A0b0C01", expected: "10.11.12.1", expectedErr: nil},
+	}
+
+	// Run test cases
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ipv4, err := ip.ParseIPv4FromHex(tc.input)
+
+			// Check for unexpected error
+			if err != tc.expectedErr {
+				t.Fatalf("expected error %v, got %v", tc.expectedErr, err)
+			}
+			if ipv4 != tc.expected {
+				t.Errorf("expected IP address %q, got %q", tc.expected, ipv4)
 			}
 		})
 	}

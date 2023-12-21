@@ -42,7 +42,11 @@ the address. If no subnet mask is specified, a subnet mask of 24 bits is assumed
 Examples:
   iptool inspect 10.0.0.1
   iptool inspect 10.0.0.1/24
-  iptool inspect 10.0.0.1 255.255.255.0`,
+  iptool inspect 10.0.0.1 255.255.255.0
+  iptool inspect 0xc0800d25
+  iptool inspect c0800d25/22
+  iptool inspect c0800d25 fffffe00
+  `,
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// If no arguments are provided, print a short help text
@@ -51,6 +55,7 @@ Examples:
 			return nil
 		}
 		input := strings.Join(args, " ")
+
 		return inspectAction(os.Stdout, input)
 	},
 }
@@ -72,9 +77,11 @@ Network Details:
  Usable hosts       : {{.FirstHost}} - {{.LastHost}} ({{.UsableHosts}} hosts)
 `
 
-	// Check if the input is an IPv4 or IPv6 address
-	if strings.Contains(s, ".") {
-		// Parse the IP address and subnet mask
+	if strings.Contains(s, ":") {
+		// If there is a colon in the input string, assume it is an IPv6 address
+		return fmt.Errorf("support for IPv6 addresses is not implemented yet")
+	} else {
+		// Otherwise, assume it is an IPv4 address (either in hexadecimal or dotted decimal notation)
 		ipv4, err := ip.ParseIPv4(s)
 		if err != nil {
 			return err
@@ -115,11 +122,8 @@ Network Details:
 		if err != nil {
 			fmt.Println("Error executing template:", err)
 		}
-	} else {
-		// In the case of an IPv6 address, we need to parse the IP address and prefix length
-		// To be implemented in a future version
-		return fmt.Errorf("invalid IP address: %s", s)
 	}
+
 	return nil
 }
 
