@@ -22,11 +22,15 @@ THE SOFTWARE.
 package ip
 
 import (
+	"errors"
 	"fmt"
 	"net"
+	"regexp"
 	"strconv"
 	"strings"
 )
+
+var ErrInvalidHexAddress = errors.New("invalid hexadecimal IPv4 address")
 
 // The IPv4 struct represents an IPv4 address as an IP address, a subnet mask
 // and a network address. It also contains functions for calculating the
@@ -270,6 +274,18 @@ func NetmaskPrefixLength(mask string) (int, error) {
 	return ones, nil
 }
 
+// IsHexIPv4 is a function that takes a string as input and returns true if the
+// string is a valid hexadecimal IPv4 address. Otherwise it returns false.
+func IsIPv4Hex(hexIP string) bool {
+	// Remove dots and "0x" prefix if present
+	hexIP = regexp.MustCompile(`0x`).ReplaceAllString(hexIP, "")
+
+	// Check if the remaining string is exactly 8 hexadecimal digits
+	match, _ := regexp.MatchString(`^[0-9a-fA-F]{8}$`, hexIP)
+
+	return match
+}
+
 // ParseIPv4 is a function that takes a string as input and returns an IPv4 address
 // and a subnet mask as output.
 // The input string can be in the following formats:
@@ -281,6 +297,18 @@ func ParseIPv4(s string) (*IPv4, error) {
 	parts := strings.FieldsFunc(s, func(r rune) bool {
 		return r == '/' || r == ' '
 	})
+
+	// If a part is in hexadecimal notation, convert it to dotted-decimal notation
+	for i := 0; i < len(parts); i++ {
+		// If the part is in hexadecimal notation, convert it to dotted-decimal notation
+		if IsIPv4Hex(parts[i]) {
+			ipv4, err := ParseIPv4FromHex(parts[i])
+			if err != nil {
+				return nil, err
+			}
+			parts[i] = ipv4
+		}
+	}
 
 	// If the input string contains two parts, check if the second part is a netmask
 	// in dotted-decimal notation (255.255.255.0) or CIDR notation (24)
@@ -310,4 +338,91 @@ func ParseIPv4(s string) (*IPv4, error) {
 		return nil, err
 	}
 	return &IPv4{IP: ip, Mask: ipnet.Mask, Net: ipnet}, nil
+}
+
+// ParseIPv4FromHex is a function that takes a string as input and returns an
+// IPv4 address in dotted-decimal notation. The input string must be a valid
+// hexadecimal IPv4 address.
+func ParseIPv4FromHex(hexIP string) (string, error) {
+	// Remove dots and "0x" prefix if present
+	hexIP = regexp.MustCompile(`0x`).ReplaceAllString(hexIP, "")
+
+	// A valid hexadecimal IPv4 address must be exactly 8 hexadecimal digits
+	if len(hexIP) != 8 {
+		return "", fmt.Errorf("invalid length for hex IP address")
+	}
+
+	// Create a slice of bytes with length 4 to store the IP address
+	ipBytes := make([]byte, 4)
+
+	// Convert each pair of hexadecimal digits to a byte
+	for i := 0; i < 4; i++ {
+		byteValue, err := strconv.ParseInt(hexIP[i*2:i*2+2], 16, 16)
+		if err != nil {
+			return "", ErrInvalidHexAddress
+		}
+		ipBytes[i] = byte(byteValue)
+	}
+
+	// Convert the slice of bytes to an IP address
+	ip := net.IPv4(ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3])
+
+	return ip.String(), nil
+}
+
+func IPv4ToBinary(ipStr string) string {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return ""
+	}
+
+	ip = ip.To4()
+	if ip == nil {
+		return ""
+	}
+
+	binaryIP := make([]string, 4)
+	for i, byteValue := range ip {
+		binaryIP[i] = fmt.Sprintf("%08b", byteValue)
+	}
+
+	return strings.Join(binaryIP, ".")
+}
+
+func IPv4ToHex(ipStr string) string {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return ""
+	}
+
+	ip = ip.To4()
+	if ip == nil {
+		return ""
+	}
+
+	hexIP := ""
+	for _, byteValue := range ip {
+		hexIP += fmt.Sprintf("%02x", byteValue)
+	}
+
+	return hexIP
+}
+
+func IPv4ToDecimal(ipStr string) string {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return ""
+	}
+
+	ip = ip.To4()
+	if ip == nil {
+		return ""
+	}
+
+	decimalIP := 0
+	for _, byteValue := range ip {
+		decimalIP = decimalIP*256 + int(byteValue)
+	}
+
+	return fmt.Sprintf("%d", decimalIP)
 }
