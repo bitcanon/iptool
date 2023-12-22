@@ -292,6 +292,13 @@ func IsIPv4Hex(hexIP string) bool {
 // - "X.X.X.X/Y"
 // - "X.X.X.X Y"
 // - "X.X.X.X"
+// - "0xXXXXXXXX/Y"
+// - "0xXXXXXXXX Y"
+// - "0xXXXXXXXX"
+// - "XXXXXXXX/Y"
+// - "XXXXXXXX Y"
+// - "XXXXXXXX"
+// - "XXXXXXXX XXXXXXXX/
 func ParseIPv4(s string) (*IPv4, error) {
 	// Try to split the input string into an IP address and a netmask
 	parts := strings.FieldsFunc(s, func(r rune) bool {
@@ -370,6 +377,8 @@ func ParseIPv4FromHex(hexIP string) (string, error) {
 	return ip.String(), nil
 }
 
+// IPv4ToBinary is a function that takes an IPv4 address in dotted-decimal
+// notation as input and returns the IP address in binary notation.
 func IPv4ToBinary(ipStr string) string {
 	ip := net.ParseIP(ipStr)
 	if ip == nil {
@@ -389,6 +398,8 @@ func IPv4ToBinary(ipStr string) string {
 	return strings.Join(binaryIP, ".")
 }
 
+// IPv4ToHex is a function that takes an IPv4 address in dotted-decimal
+// notation as input and returns the IP address in hexadecimal notation.
 func IPv4ToHex(ipStr string) string {
 	ip := net.ParseIP(ipStr)
 	if ip == nil {
@@ -408,6 +419,8 @@ func IPv4ToHex(ipStr string) string {
 	return hexIP
 }
 
+// IPv4ToDecimal is a function that takes an IPv4 address in dotted-decimal
+// notation as input and returns the IP address in decimal notation (integer).
 func IPv4ToDecimal(ipStr string) string {
 	ip := net.ParseIP(ipStr)
 	if ip == nil {
