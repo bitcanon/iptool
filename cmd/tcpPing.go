@@ -22,12 +22,14 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"math"
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -49,41 +51,55 @@ prints the response time, until the user presses Ctrl-C.
 If no port is specified, the default port 443 is used.
 
 Example:
-  tcp ping 1.0.0.1
-  tcp ping 1.0.0.1 443`,
+  iptool tcp ping 1.0.0.1
+  iptool tcp ping 1.0.0.1 443
+  iptool tcp ping 1.0.0.1:53 --timeout 500`,
+	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// // Parse the arguments (destination and optional port)
-		// if len(args) < 1 || len(args) > 2 {
-		// 	return errors.New("invalid number of arguments")
-		// }
+		// Check that the user provided one or two arguments
+		if len(args) < 1 || len(args) > 2 {
+			return errors.New("invalid number of arguments")
+		}
 
-		// Parse the destination
-		destination := args[0]
+		// Check if the user used the format host:port
+		if strings.Contains(args[0], ":") {
+			// Split the host and port
+			hostPort := strings.Split(args[0], ":")
+			args[0] = hostPort[0]
+			args = append(args, hostPort[1])
+		}
+
+		// Parse the host
+		host := args[0]
 
 		// Parse the port
 		port := 443
 		if len(args) == 2 {
+			// Convert the port to an integer
 			p, err := strconv.Atoi(args[1])
 			if err != nil {
 				return err
 			}
+
+			// Check that the port is valid
+			if p < 1 || p > 65535 {
+				return errors.New("invalid port number, must be between 1 and 65535")
+			}
+
+			// Set the port
 			port = p
 		}
 
-		return tcpPingAction(os.Stdout, destination, port)
+		return tcpPingAction(os.Stdout, host, port)
 	},
 }
 
 func tcpPingAction(out io.Writer, host string, port int) error {
 	// Define the delay duration
-	var delay time.Duration = 1 * time.Second
+	delay := viper.GetDuration("tcp.ping.delay") * time.Millisecond
 
-	if viper.IsSet("tcp.ping.delay") {
-		delay = viper.GetDuration("tcp.ping.delay")
-	}
-
-	// Print delay information (Delay is 1 second)
-	fmt.Fprintf(out, "Delay is %s\n", delay)
+	// Define the number of packets to send
+	count := viper.GetInt("tcp.ping.count")
 
 	// Resolve the IP address of the destination
 	ip, err := ip.ResolveIP(host)
@@ -144,7 +160,7 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 		}
 	}()
 
-	// Set timeout duration
+	// Set timeout duration for the TCP ping (default 2000 ms)
 	timeoutMs := viper.GetDuration("tcp.ping.timeout") * time.Millisecond
 
 	// Perform the TCP ping until user presses Ctrl-C
@@ -152,9 +168,9 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 		// Send SYN packet and wait for SYN/ACK response
 		packetsSent++
 
-		responseTime, err := tcp.PingTCP(host, port, 10, timeoutMs)
+		responseTime, err := tcp.PingTCP(host, port, timeoutMs)
 		if err != nil {
-			fmt.Fprintf(out, "Request timeout for %s: port=%d ttl=12 timeout=%s\n", ip, port, timeoutMs)
+			fmt.Fprintf(out, "Request timeout for %s: port=%d timeout=%s\n", ip, port, timeoutMs)
 			continue
 		}
 		packetsReceived++
@@ -182,40 +198,50 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 		// This is an average of how far each ping RTT is from the mean RTT. The higher mdev is, the more variable the RTT is (over time).
 		stdResponseDeviation := float64(responseTime - avgResponseTime)
 		stdResponseDeviation = math.Sqrt(math.Pow(stdResponseDeviation, 2))
-		stdResponseDeviationMs := time.Duration(stdResponseDeviation)
 
 		// Update total response deviation for later calculation of mdev
 		totResponseDeviation += time.Duration(stdResponseDeviation)
 
 		// Print response information (debug or normal output)
-		if viper.GetBool("debug") {
-			fmt.Fprintf(out, "Received SYN/ACK from %s: port=%d tcp_seq=%d ttl=54 time=%s mrtt=%s dev=%s\n", ip, port, packetsSent, responseTime.Round(time.Microsecond*10), avgResponseTime, stdResponseDeviationMs)
-		} else {
-			fmt.Fprintf(out, "Received SYN/ACK from %s: port=%d tcp_seq=%d ttl=54 time=%s\n", ip, port, packetsSent, responseTime.Round(time.Microsecond*10))
-		}
+		if viper.GetBool("tcp.ping.verbose") {
+			currentTime := time.Now().Format("2006-01-02 15:04:05.999999999")
 
-		// Pause execution for the specified delay duration
-		time.Sleep(delay)
+			fmt.Fprintf(out, "[%-27s] Received SYN/ACK from %s: port=%d tcp_seq=%d time=%-8s mrtt=%s\n", currentTime, ip, port, packetsSent, responseTime.Round(time.Microsecond*10), avgResponseTime.Round(time.Microsecond*10))
+		} else {
+			fmt.Fprintf(out, "Received SYN/ACK from %s: port=%d tcp_seq=%d time=%s\n", ip, port, packetsSent, responseTime.Round(time.Microsecond*10))
+		}
 
 		// Update TCP sequence number
 		tcpSeq++
 
-		// [TODO] totalTime should show the total time since the first packet was sent
-		// [TODO] When pinging an address that is not responding, print "Request timeout for 65.9.55.64: port=443 ttl=12 time=1.05sec"
-		// [TODO] Calculate min, avg, max and mdev response times
-		// [TODO] Implement tcp.ping.delay flag
-		// [TODO] Implement tcp.ping.count flag
-		// [TODO] Implement tcp.ping.interval flag
-		// [TODO] Implement tcp.ping.timeout flag
-		// [TODO] Implement tcp.ping.ttl flag
+		// Check if the user specified a number of packets to send
+		if count > 0 && packetsSent >= count {
+			// Raise interrupt signal to stop the ping loop
+			interrupt <- os.Interrupt
+		}
 
+		// Pause execution for the specified delay duration
+		time.Sleep(delay)
 	}
 }
 
 func init() {
 	tcpCmd.AddCommand(pingCmd)
 
-	// Enable the --detailed flag for the inspect command
-	pingCmd.Flags().IntP("timeout", "t", 1000, "time in milliseconds to wait for a response")
+	// Enable the --timeout flag for the ping command
+	pingCmd.Flags().IntP("timeout", "t", 2000, "time to wait for a response, in milliseconds")
 	viper.BindPFlag("tcp.ping.timeout", pingCmd.Flags().Lookup("timeout"))
+
+	// Enable the --delay flag for the ping command
+	pingCmd.Flags().IntP("delay", "d", 1000, "delay between pings, in milliseconds")
+	viper.BindPFlag("tcp.ping.delay", pingCmd.Flags().Lookup("delay"))
+
+	// Enable the --count flag for the ping command
+	pingCmd.Flags().IntP("count", "c", 0, "")
+	viper.BindPFlag("tcp.ping.count", pingCmd.Flags().Lookup("count"))
+	pingCmd.Flags().Lookup("count").Usage = "number of packets to send (default infinite)"
+
+	// Enabled the --verbose flag for the ping command
+	pingCmd.Flags().BoolP("verbose", "v", false, "show timestamps and mean round-trip time (mrtt)")
+	viper.BindPFlag("tcp.ping.verbose", pingCmd.Flags().Lookup("verbose"))
 }

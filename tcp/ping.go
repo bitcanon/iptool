@@ -4,23 +4,20 @@ import (
 	"net"
 	"strconv"
 	"time"
-
-	"golang.org/x/net/ipv4"
 )
 
-func PingTCP(host string, port int, ttl int, timeoutMs time.Duration) (time.Duration, error) {
+func PingTCP(host string, port int, timeoutMs time.Duration) (time.Duration, error) {
+	// Start the timer
 	start := time.Now()
 
+	// Connect to the host on the specified port and timeout
 	conn, err := net.DialTimeout("tcp", host+":"+strconv.Itoa(port), timeoutMs)
 	if err != nil {
 		return 0, err
 	}
 	defer conn.Close()
 
-	p := ipv4.NewConn(conn)
-	if err := p.SetTTL(ttl); err != nil {
-		return 0, err
-	}
+	// Calculate the round-trip time
 	rtt := time.Since(start)
 
 	return rtt, nil
