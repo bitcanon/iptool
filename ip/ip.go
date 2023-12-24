@@ -56,3 +56,18 @@ func IsIPv6(s string) bool {
 	}
 	return false
 }
+
+// ResolveIP is a function that resolves a hostname to an IP address
+// and returns the first IPv4 address found.
+func ResolveIP(hostname string) (string, error) {
+	ips, err := net.LookupIP(hostname)
+	if err != nil {
+		return "", err
+	}
+	for _, ip := range ips {
+		if ip.To4() != nil {
+			return ip.String(), nil
+		}
+	}
+	return "", errors.New("no IPv4 address found")
+}

@@ -77,6 +77,7 @@ func init() {
 	// Add persistent flag for debug mode
 	rootCmd.PersistentFlags().Bool("debug", false, "show debug info")
 	viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
+	rootCmd.PersistentFlags().Lookup("debug").Hidden = true
 
 	// Set a custom version template
 	rootCmd.SetVersionTemplate(`{{ printf "%s %s" .Name .Version }}`)
