@@ -114,25 +114,29 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
-	// Initialize variables for ping statistics
+	// Packet counters
 	packetsSent := 0
 	packetsReceived := 0
-	packetLoss := 0
+
+	// Response times
 	minResponseTime := time.Duration(0)
 	maxResponseTime := time.Duration(0)
 	avgResponseTime := time.Duration(0)
 	mdevResponseTime := time.Duration(0)
 	totResponseTime := time.Duration(0)
 	totResponseDeviation := time.Duration(0)
+
+	// TCP sequence number
 	tcpSeq := 0
 
 	// Start the timer
 	startTime := time.Now()
 
-	// Start a goroutine that will print a message when a signal is received
+	// Start a goroutine that will print a message when a signal (Ctrl-C) is received
 	go func() {
 		sig := <-interrupt
 
+		// Ctrl-C was pressed, print statistics and exit
 		if sig == os.Interrupt {
 			// Calculate mean deviation
 			if packetsReceived > 1 {
@@ -150,7 +154,7 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 			mdevResponseTimeMs := mdevResponseTime.Round(time.Microsecond * 10)
 
 			// Calculate packet loss
-			packetLoss = (packetsSent - packetsReceived) * 100 / packetsSent
+			packetLoss := (packetsSent - packetsReceived) * 100 / packetsSent
 
 			fmt.Fprintln(out, "^C")
 			fmt.Fprintf(out, "--- %s ping statistics ---\n", host)
@@ -168,11 +172,14 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 		// Send SYN packet and wait for SYN/ACK response
 		packetsSent++
 
+		// Send SYN packet and wait for SYN/ACK response
 		responseTime, err := tcp.PingTCP(host, port, timeoutMs)
 		if err != nil {
 			fmt.Fprintf(out, "Request timeout for %s: port=%d timeout=%s\n", ip, port, timeoutMs)
 			continue
 		}
+
+		// 3-way handshake completed, update packets received
 		packetsReceived++
 
 		// Update total response time
@@ -205,7 +212,6 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 		// Print response information (debug or normal output)
 		if viper.GetBool("tcp.ping.verbose") {
 			currentTime := time.Now().Format("2006-01-02 15:04:05.999999999")
-
 			fmt.Fprintf(out, "[%-27s] Received SYN/ACK from %s: port=%d tcp_seq=%d time=%-8s mrtt=%s\n", currentTime, ip, port, packetsSent, responseTime.Round(time.Microsecond*10), avgResponseTime.Round(time.Microsecond*10))
 		} else {
 			fmt.Fprintf(out, "Received SYN/ACK from %s: port=%d tcp_seq=%d time=%s\n", ip, port, packetsSent, responseTime.Round(time.Microsecond*10))
