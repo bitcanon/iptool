@@ -108,9 +108,6 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 		return err
 	}
 
-	// Print start message (Initiate 3-way handshake with one.one.one.one (1.1.1.1) on port 443.)
-	fmt.Fprintf(out, "Initiating 3-way handshakes with %s (%s) on port %d.\n", host, ip, port)
-
 	// Create a channel to receive interrupt signals
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
@@ -132,6 +129,28 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 
 	// Start the timer
 	startTime := time.Now()
+
+	// Determine the output file using Viper
+	outputFile := viper.GetString("tcp.ping.output-file")
+	append := viper.GetBool("tcp.ping.append")
+
+	// Get the output stream
+	outputStream, err := utils.GetOutputStream(outputFile, append)
+	if err != nil {
+		return err
+	}
+	defer outputStream.Close()
+
+	// Print start message (Initiate 3-way handshake with one.one.one.one (1.1.1.1) on port 443.)
+	startMsg := fmt.Sprintf("Initiating 3-way handshakes with %s (%s) on port %d.\n", host, ip, port)
+
+	// Print the compiled string to stdout
+	fmt.Fprint(out, startMsg)
+
+	// Print to file as well if --output-file is set
+	if viper.IsSet("tcp.ping.output-file") {
+		fmt.Fprint(outputStream, startMsg)
+	}
 
 	// Start a goroutine that will print a message when a signal (Ctrl-C) is received
 	go func() {
@@ -157,27 +176,24 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 			// Calculate packet loss
 			packetLoss := (packetsSent - packetsReceived) * 100 / packetsSent
 
-			fmt.Fprintln(out, "^C")
-			fmt.Fprintf(out, "--- %s ping statistics ---\n", host)
-			fmt.Fprintf(out, "%d packets transmitted, %d received, %d%% packet loss, time %s\n", packetsSent, packetsReceived, packetLoss, totalTimeMs)
-			fmt.Fprintf(out, "rtt min/avg/max/mdev = %s/%s/%s/%s\n", minResponseTimeMs, avgResponseTimeMs, maxResponseTimeMs, mdevResponseTimeMs)
+			outStr := fmt.Sprintf("^C\n")
+			outStr += fmt.Sprintf("--- %s ping statistics ---\n", host)
+			outStr += fmt.Sprintf("%d packets transmitted, %d received, %d%% packet loss, time %s\n", packetsSent, packetsReceived, packetLoss, totalTimeMs)
+			outStr += fmt.Sprintf("rtt min/avg/max/mdev = %s/%s/%s/%s\n", minResponseTimeMs, avgResponseTimeMs, maxResponseTimeMs, mdevResponseTimeMs)
+
+			// Print the compiled string to stdout
+			fmt.Fprint(out, outStr)
+
+			// Print to file as well if --output-file is set
+			if viper.IsSet("tcp.ping.output-file") {
+				fmt.Fprint(outputStream, outStr)
+			}
 			os.Exit(0)
 		}
 	}()
 
 	// Set timeout duration for the TCP ping (default 2000 ms)
 	timeoutMs := viper.GetDuration("tcp.ping.timeout") * time.Millisecond
-
-	// Determine the output file using Viper
-	outputFile := viper.GetString("tcp.ping.output-file")
-	append := viper.GetBool("tcp.ping.append")
-
-	// Get the output stream
-	outputStream, err := utils.GetOutputStream(outputFile, append)
-	if err != nil {
-		return err
-	}
-	defer outputStream.Close()
 
 	// Perform the TCP ping until user presses Ctrl-C
 	for {
@@ -192,26 +208,25 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 				currentTime := time.Now().Format("2006-01-02 15:04:05.999999999")
 
 				// Format the output string
-				formatStr := "[%-27s] Request timeout for %s: port=%d timeout=%s\n"
+				outStr := fmt.Sprintf("[%-27s] Request timeout for %s: port=%d timeout=%s\n", currentTime, ip, port, timeoutMs)
 
-				// Print to stdout
-				fmt.Fprintf(out, formatStr, currentTime, ip, port, timeoutMs)
+				// Print the compiled string to stdout
+				fmt.Fprint(out, outStr)
 
 				// Print to file as well if --output-file is set
 				if viper.IsSet("tcp.ping.output-file") {
-					fmt.Fprintf(outputStream, formatStr, currentTime, ip, port, timeoutMs)
+					fmt.Fprint(outputStream, outStr)
 				}
 			} else {
-
 				// Format the output string
-				formatStr := "Request timeout for %s: port=%d timeout=%s\n"
+				outStr := fmt.Sprintf("Request timeout for %s: port=%d timeout=%s\n", ip, port, timeoutMs)
 
-				// Print to stdout
-				fmt.Fprintf(out, formatStr, ip, port, timeoutMs)
+				// Print the compiled string to stdout
+				fmt.Fprint(out, outStr)
 
 				// Print to file as well if --output-file is set
 				if viper.IsSet("tcp.ping.output-file") {
-					fmt.Fprintf(outputStream, formatStr, ip, port, timeoutMs)
+					fmt.Fprint(outputStream, outStr)
 				}
 			}
 			continue
