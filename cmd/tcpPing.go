@@ -35,6 +35,7 @@ import (
 
 	"github.com/bitcanon/iptool/ip"
 	"github.com/bitcanon/iptool/tcp"
+	"github.com/bitcanon/iptool/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -167,6 +168,17 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 	// Set timeout duration for the TCP ping (default 2000 ms)
 	timeoutMs := viper.GetDuration("tcp.ping.timeout") * time.Millisecond
 
+	// Determine the output file using Viper
+	outputFile := viper.GetString("tcp.ping.output-file")
+	append := viper.GetBool("tcp.ping.append")
+
+	// Get the output stream
+	outputStream, err := utils.GetOutputStream(outputFile, append)
+	if err != nil {
+		return err
+	}
+	defer outputStream.Close()
+
 	// Perform the TCP ping until user presses Ctrl-C
 	for {
 		// Send SYN packet and wait for SYN/ACK response
@@ -175,7 +187,33 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 		// Send SYN packet and wait for SYN/ACK response
 		responseTime, err := tcp.PingTCP(host, port, timeoutMs)
 		if err != nil {
-			fmt.Fprintf(out, "Request timeout for %s: port=%d timeout=%s\n", ip, port, timeoutMs)
+			if viper.GetBool("tcp.ping.verbose") {
+				// Get current time for timestamp
+				currentTime := time.Now().Format("2006-01-02 15:04:05.999999999")
+
+				// Format the output string
+				formatStr := "[%-27s] Request timeout for %s: port=%d timeout=%s\n"
+
+				// Print to stdout
+				fmt.Fprintf(out, formatStr, currentTime, ip, port, timeoutMs)
+
+				// Print to file as well if --output-file is set
+				if viper.IsSet("tcp.ping.output-file") {
+					fmt.Fprintf(outputStream, formatStr, currentTime, ip, port, timeoutMs)
+				}
+			} else {
+
+				// Format the output string
+				formatStr := "Request timeout for %s: port=%d timeout=%s\n"
+
+				// Print to stdout
+				fmt.Fprintf(out, formatStr, ip, port, timeoutMs)
+
+				// Print to file as well if --output-file is set
+				if viper.IsSet("tcp.ping.output-file") {
+					fmt.Fprintf(outputStream, formatStr, ip, port, timeoutMs)
+				}
+			}
 			continue
 		}
 
@@ -211,10 +249,30 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 
 		// Print response information (debug or normal output)
 		if viper.GetBool("tcp.ping.verbose") {
+			// Get current time for timestamp
 			currentTime := time.Now().Format("2006-01-02 15:04:05.999999999")
-			fmt.Fprintf(out, "[%-27s] Received SYN/ACK from %s: port=%d tcp_seq=%d time=%-8s mrtt=%s\n", currentTime, ip, port, packetsSent, responseTime.Round(time.Microsecond*10), avgResponseTime.Round(time.Microsecond*10))
+
+			// Format the output string
+			formatStr := "[%-27s] Received SYN/ACK from %s: port=%d tcp_seq=%d time=%-8s mrtt=%s\n"
+
+			// Print to stdout
+			fmt.Fprintf(out, formatStr, currentTime, ip, port, packetsSent, responseTime.Round(time.Microsecond*10), avgResponseTime.Round(time.Microsecond*10))
+
+			// Print to file as well if --output-file is set
+			if viper.IsSet("tcp.ping.output-file") {
+				fmt.Fprintf(outputStream, formatStr, currentTime, ip, port, packetsSent, responseTime.Round(time.Microsecond*10), avgResponseTime.Round(time.Microsecond*10))
+			}
 		} else {
-			fmt.Fprintf(out, "Received SYN/ACK from %s: port=%d tcp_seq=%d time=%s\n", ip, port, packetsSent, responseTime.Round(time.Microsecond*10))
+			// Format the output string
+			formatStr := "Received SYN/ACK from %s: port=%d tcp_seq=%d time=%s\n"
+
+			// Print to stdout
+			fmt.Fprintf(out, formatStr, ip, port, packetsSent, responseTime.Round(time.Microsecond*10))
+
+			// Print to file as well if --output-file is set
+			if viper.IsSet("tcp.ping.output-file") {
+				fmt.Fprintf(outputStream, formatStr, ip, port, packetsSent, responseTime.Round(time.Microsecond*10))
+			}
 		}
 
 		// Update TCP sequence number
@@ -250,4 +308,17 @@ func init() {
 	// Enabled the --verbose flag for the ping command
 	pingCmd.Flags().BoolP("verbose", "v", false, "show timestamps and mean round-trip time (mrtt)")
 	viper.BindPFlag("tcp.ping.verbose", pingCmd.Flags().Lookup("verbose"))
+
+	// Add flag for --output-file path
+	pingCmd.PersistentFlags().StringP("output-file", "o", "", "write output to file")
+	viper.BindPFlag("tcp.ping.output-file", pingCmd.PersistentFlags().Lookup("output-file"))
+
+	// Set to the value of the --append flag if set
+	pingCmd.PersistentFlags().BoolP("append", "a", false, "append when writing to file with --output-file")
+	viper.BindPFlag("tcp.ping.append", pingCmd.PersistentFlags().Lookup("append"))
+
+	// Set to the value of the --csv flag if set
+	pingCmd.PersistentFlags().BoolP("csv", "C", false, "write output in CSV format")
+	viper.BindPFlag("tcp.ping.csv", pingCmd.PersistentFlags().Lookup("csv"))
+
 }
