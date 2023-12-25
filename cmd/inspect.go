@@ -183,7 +183,7 @@ func inspectAction(out io.Writer, s string) error {
 
 		// If the --detailed flag is set, use the advanced template
 		selectedTemplate := simpleTemplate
-		if viper.GetBool("inspect.detailed") {
+		if viper.GetBool("inspect.verbose") {
 			selectedTemplate = advancedTemplate
 		}
 
@@ -204,7 +204,7 @@ func init() {
 	// Register the inspect command with the root command
 	rootCmd.AddCommand(inspectCmd)
 
-	// Enable the --detailed flag for the inspect command
-	inspectCmd.Flags().BoolP("detailed", "d", false, "display comprehensive IP address information")
-	viper.BindPFlag("inspect.detailed", inspectCmd.Flags().Lookup("detailed"))
+	// Enable the --verbose flag for the inspect command
+	inspectCmd.Flags().BoolP("verbose", "v", false, "display comprehensive IP address information")
+	viper.BindPFlag("inspect.verbose", inspectCmd.Flags().Lookup("verbose"))
 }
