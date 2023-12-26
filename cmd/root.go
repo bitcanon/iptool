@@ -43,7 +43,7 @@ The iptool is useful when detailed information about an IP address or various
 subnetting information is required. The tool takes input from the user,
 parses the input and presents the user with detailed information.
 
-Author: Mikael Schultz <bitcanon@proton.me>
+Author: Mikael Schultz <bitcanon@conf-t.se>
 GitHub: https://github.com/bitcanon/iptool
 `,
 	CompletionOptions: cobra.CompletionOptions{

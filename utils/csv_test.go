@@ -3,7 +3,7 @@ package utils_test
 import (
 	"testing"
 
-	"github.com/bitcanon/mactool/utils"
+	"github.com/bitcanon/iptool/utils"
 )
 
 // TestConvertStringSliceToCSV tests the ConvertStringSliceToCSV function

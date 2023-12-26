@@ -40,11 +40,13 @@ import (
 	"github.com/spf13/viper"
 )
 
+var csvFlagError = errors.New("the --csv flag requires the --output-file flag to be set")
+
 // pingCmd represents the ping command
 var pingCmd = &cobra.Command{
 	Use:   "ping <destination> [port]",
-	Short: "Send a stream of TCP pings to a host",
-	Long: `Send a stream of TCP pings to a host.
+	Short: "Send a sequence of TCP pings to a host",
+	Long: `Send a sequence of TCP pings to a host.
 
 The TCP ping command sends SYN packets to a host and
 prints the response time, until the user presses Ctrl-C.
@@ -102,6 +104,11 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 	// Define the number of packets to send
 	count := viper.GetInt("tcp.ping.count")
 
+	// If the --csv flag is set and --output-file is not set, return an error
+	if viper.GetBool("tcp.ping.csv") && !viper.IsSet("tcp.ping.output-file") {
+		return csvFlagError
+	}
+
 	// Resolve the IP address of the destination
 	ip, err := ip.ResolveIP(host)
 	if err != nil {
@@ -124,9 +131,6 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 	totResponseTime := time.Duration(0)
 	totResponseDeviation := time.Duration(0)
 
-	// TCP sequence number
-	tcpSeq := 0
-
 	// Start the timer
 	startTime := time.Now()
 
@@ -147,9 +151,16 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 	// Print the compiled string to stdout
 	fmt.Fprint(out, startMsg)
 
+	// Print CSV header if --csv is set
+	csvStartMsg := fmt.Sprintf("timestamp,host,ip,port,status,response_time_ms\n")
+
 	// Print to file as well if --output-file is set
-	if viper.IsSet("tcp.ping.output-file") {
-		fmt.Fprint(outputStream, startMsg)
+	if !viper.GetBool("tcp.ping.append") {
+		if viper.IsSet("tcp.ping.output-file") && viper.GetBool("tcp.ping.csv") {
+			fmt.Fprint(outputStream, csvStartMsg)
+		} else if viper.IsSet("tcp.ping.output-file") {
+			fmt.Fprint(outputStream, startMsg)
+		}
 	}
 
 	// Start a goroutine that will print a message when a signal (Ctrl-C) is received
@@ -184,8 +195,8 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 			// Print the compiled string to stdout
 			fmt.Fprint(out, outStr)
 
-			// Print to file as well if --output-file is set
-			if viper.IsSet("tcp.ping.output-file") {
+			// Print to file as well if --output-file is set and --csv is not set
+			if viper.IsSet("tcp.ping.output-file") && !viper.GetBool("tcp.ping.csv") {
 				fmt.Fprint(outputStream, outStr)
 			}
 			os.Exit(0)
@@ -202,19 +213,29 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 
 		// Send SYN packet and wait for SYN/ACK response
 		responseTime, err := tcp.PingTCP(host, port, timeoutMs)
-		if err != nil {
-			if viper.GetBool("tcp.ping.verbose") {
-				// Get current time for timestamp
-				currentTime := time.Now().Format("2006-01-02 15:04:05.999999999")
 
+		// Check if the ping timed out
+		if err != nil {
+			// Get current time for timestamp
+			currentTime := utils.GetTimestamp()
+
+			// Format the CSV output string
+			csvOutStr := fmt.Sprintf("%027s,%s,%s,%d,%s,%d\n", currentTime, host, ip, port, "offline", 0)
+
+			// Print to file as well if --output-file is set
+			if viper.IsSet("tcp.ping.output-file") && viper.GetBool("tcp.ping.csv") {
+				fmt.Fprint(outputStream, csvOutStr)
+			}
+
+			if viper.GetBool("tcp.ping.verbose") {
 				// Format the output string
-				outStr := fmt.Sprintf("[%-27s] Request timeout for %s: port=%d timeout=%s\n", currentTime, ip, port, timeoutMs)
+				outStr := fmt.Sprintf("[%027s] Request timeout for %s: port=%d timeout=%s\n", currentTime, ip, port, timeoutMs)
 
 				// Print the compiled string to stdout
 				fmt.Fprint(out, outStr)
 
 				// Print to file as well if --output-file is set
-				if viper.IsSet("tcp.ping.output-file") {
+				if viper.IsSet("tcp.ping.output-file") && !viper.GetBool("tcp.ping.csv") {
 					fmt.Fprint(outputStream, outStr)
 				}
 			} else {
@@ -225,7 +246,7 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 				fmt.Fprint(out, outStr)
 
 				// Print to file as well if --output-file is set
-				if viper.IsSet("tcp.ping.output-file") {
+				if viper.IsSet("tcp.ping.output-file") && !viper.GetBool("tcp.ping.csv") {
 					fmt.Fprint(outputStream, outStr)
 				}
 			}
@@ -262,19 +283,31 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 		// Update total response deviation for later calculation of mdev
 		totResponseDeviation += time.Duration(stdResponseDeviation)
 
+		// Convert responseTime to float64
+		responseTimeFloat := float64(responseTime) / float64(time.Millisecond)
+
+		// Get current time for timestamp
+		currentTime := utils.GetTimestamp()
+
+		// Format the CSV output string
+		csvOutStr := fmt.Sprintf("%s,%s,%s,%d,%s,%.4f\n", currentTime, host, ip, port, "online", responseTimeFloat)
+
+		// Print to file as well if --output-file is set
+		if viper.IsSet("tcp.ping.output-file") && viper.GetBool("tcp.ping.csv") {
+			fmt.Fprint(outputStream, csvOutStr)
+		}
+
 		// Print response information (debug or normal output)
 		if viper.GetBool("tcp.ping.verbose") {
-			// Get current time for timestamp
-			currentTime := time.Now().Format("2006-01-02 15:04:05.999999999")
 
 			// Format the output string
-			formatStr := "[%-27s] Received SYN/ACK from %s: port=%d tcp_seq=%d time=%-8s mrtt=%s\n"
+			formatStr := "[%s] Received SYN/ACK from %s: port=%d tcp_seq=%d time=%-8s mrtt=%s\n"
 
 			// Print to stdout
 			fmt.Fprintf(out, formatStr, currentTime, ip, port, packetsSent, responseTime.Round(time.Microsecond*10), avgResponseTime.Round(time.Microsecond*10))
 
 			// Print to file as well if --output-file is set
-			if viper.IsSet("tcp.ping.output-file") {
+			if viper.IsSet("tcp.ping.output-file") && !viper.GetBool("tcp.ping.csv") {
 				fmt.Fprintf(outputStream, formatStr, currentTime, ip, port, packetsSent, responseTime.Round(time.Microsecond*10), avgResponseTime.Round(time.Microsecond*10))
 			}
 		} else {
@@ -285,13 +318,10 @@ func tcpPingAction(out io.Writer, host string, port int) error {
 			fmt.Fprintf(out, formatStr, ip, port, packetsSent, responseTime.Round(time.Microsecond*10))
 
 			// Print to file as well if --output-file is set
-			if viper.IsSet("tcp.ping.output-file") {
+			if viper.IsSet("tcp.ping.output-file") && !viper.GetBool("tcp.ping.csv") {
 				fmt.Fprintf(outputStream, formatStr, ip, port, packetsSent, responseTime.Round(time.Microsecond*10))
 			}
 		}
-
-		// Update TCP sequence number
-		tcpSeq++
 
 		// Check if the user specified a number of packets to send
 		if count > 0 && packetsSent >= count {
