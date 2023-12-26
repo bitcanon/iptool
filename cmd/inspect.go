@@ -1,5 +1,5 @@
 /*
-Copyright © 2024 Mikael Schultz <bitcanon@conf-t.se>
+Copyright © 2024 Mikael Schultz <mikael@conf-t.se>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

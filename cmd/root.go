@@ -1,5 +1,5 @@
 /*
-Copyright © 2024 Mikael Schultz <bitcanon@conf-t.se>
+Copyright © 2024 Mikael Schultz <mikael@conf-t.se>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,7 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Version: "1.0.0",
+	Version: "1.1.0",
 	Use:     "iptool",
 	Short:   "Simplify IP address and subnet tasks on the command line",
 	Long: `Simplify IP address and subnet tasks on the command line.
@@ -43,7 +43,7 @@ The iptool is useful when detailed information about an IP address or various
 subnetting information is required. The tool takes input from the user,
 parses the input and presents the user with detailed information.
 
-Author: Mikael Schultz <bitcanon@conf-t.se>
+Author: Mikael Schultz <mikael@conf-t.se>
 GitHub: https://github.com/bitcanon/iptool
 `,
 	CompletionOptions: cobra.CompletionOptions{
