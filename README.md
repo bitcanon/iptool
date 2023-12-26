@@ -2,7 +2,7 @@
 
 ## Overview
 
-IP Tool is a command-line utility designed to simplify common tasks related to IP and subnetting. It's written in Go and is available as a single executable file that can be downloaded and used on most operating systems, including Windows, macOS, and Linux.
+IP Tool is a command-line utility designed to simplify common tasks related to computer networking. It's written in Go and is available as a single executable file that can be downloaded and used on most operating systems, including Windows, macOS, and Linux.
 
 ![iptool-inspect-demo1](docs/img/iptool-inspect-demo1.gif)
 
@@ -10,6 +10,7 @@ IP Tool offers the following functionality:
 
 - **Inspection**: IP Tool enables you to inspect IP addresses, providing you with information such as the network address, broadcast address, and the number of hosts in the subnet.
 - **Subnetting**: It also allows you to perform subnetting operations, and can be a handy tool for network engineers and administrators.
+- **TCP**: IP Tool provides a set of TCP tools for IP networks, including a TCP ping command that can be used to check if a TCP port is open on a host, measure the latency of a TCP connection over time, and export the results to a CSV file for further analysis.
 
 ## Usage
 
@@ -21,14 +22,16 @@ iptool [command]
 
 - `inspect`: Take a closer look at an IP address
 - `subnet`: Subnetting tools for IP networks
+- `tcp`: TCP tools for IP networks
 
-## Flags
+## Help
+Every command and subcommand in IP Tool has its own help page.
 
-- `--config string` : Config file (default is $HOME/.iptool.yaml)
-- `-h, --help` : Help for iptool
-- `-v, --version` : Version for iptool
+Use the `--help` (or `-h`) flag to get more information about a command or subcommand. For example:
 
-Use `iptool [command] --help` for more information about a specific command.
+```bash
+iptool inspect --help
+```
 
 ## Installation
 
@@ -65,36 +68,16 @@ With these steps, you should now have the IP Tool executable properly downloaded
 
 Let's explore some of the common use cases for IP Tool.
 
-### Inspect IP Addresses
+### Inspect Command
 
 To inspect the details if an IP address, use the `inspect` command. For example:
 
 ```bash
 iptool inspect 10.0.0.1 255.255.255.0
 ```
-
-If the IP address entered is valid, you will see the following output:
-
-```bash
-Address Details:
- IPv4 address       : 10.0.0.1
- Network mask       : 255.255.255.0
-
-Netmask Details:
- Network mask       : 255.255.255.0
- Network bits       : 24
- Wildcard mask      : 0.0.0.255
-
-Network Details:
- CIDR notation      : 10.0.0.0/24 (256 addresses):
- Network address    : 10.0.0.0
- Broadcast address  : 10.0.0.255
- Usable hosts       : 10.0.0.1 - 10.0.0.254 (254 hosts)
- ```
-
 ![iptool-inspect-demo2](docs/img/iptool-inspect-demo2.gif)
 
-For more details on the `inspect` command, please refer to [Inspect Command](https://github.com/bitcanon/iptool/wiki/Inspect-Command) documentation.
+For more details on the `inspect` command, please refer to the [Inspect Command](https://github.com/bitcanon/iptool/wiki/iptool-inspect) documentation.
 
 ### Subnet Commands
 
@@ -106,28 +89,36 @@ iptool subnet
 
 #### Subnet List
 
-You can display a simple subnetting cheat sheet using the `subnet list` command. For instance:
+You can display a simple subnetting cheat sheet using the `subnet list` command:
 
 ```bash
 iptool subnet list
 ```
->The alias `iptool subnet ls` can also be used.
-
-This will print the following output:
-```bash
-CIDR  Subnet Mask      Addresses   Wildcard Mask
---------------------------------------------------
- /32  255.255.255.255  1           0.0.0.0
- /31  255.255.255.254  2           0.0.0.1
- /30  255.255.255.252  4           0.0.0.3
- /29  255.255.255.248  8           0.0.0.7
- /28  255.255.255.240  16          0.0.0.15
- ...
-```
-
 ![iptool-subnet-list-demo](docs/img/iptool-subnet-list-demo.gif)
 
-For more details on the `subnet list` command, please refer to [Subnet Command](https://github.com/bitcanon/iptool/wiki/Subnet-Command) documentation.
+>The alias `iptool subnet ls` can also be used.
+
+For more details on the `iptool subnet list` command, please refer to the [Subnet List Command](https://github.com/bitcanon/iptool/wiki/iptool-subnet-list) documentation.
+
+### TCP Commands
+
+At the moment, IP Tool provides a single command for TCP operations.
+
+#### TCP Ping
+
+You can use the `iptool tcp ping` command to: 
+* Check if a TCP port is open on a host
+* Measure the latency of a TCP connection over time
+* Export the results to a CSV file for further analysis
+* Connect to any TCP port (1-65535)
+* Modify the behavior of the command using flags
+
+```bash
+iptool tcp ping www.github.com -c 5
+```
+![iptool-tcp-ping](docs/img/iptool-tcp-ping.gif)
+
+For more details on the `iptool tcp ping` command, please refer to the [TCP Ping Command](https://github.com/bitcanon/iptool/wiki/iptool-tcp-ping) documentation.
 
 ## Configuration
 
