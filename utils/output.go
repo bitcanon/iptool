@@ -1,5 +1,5 @@
 /*
-Copyright © 2024 Mikael Schultz <bitcanon@proton.me>
+Copyright © 2024 Mikael Schultz <bitcanon@conf-t.se>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,7 @@ package utils
 import (
 	"fmt"
 	"io"
+	"os"
 	"sort"
 )
 
@@ -58,4 +59,35 @@ func PrintMap(out io.Writer, m map[string]string) {
 		// Left align (-) with padding spaces (*)
 		fmt.Printf("%-*s : %s\n", maxKeyLength, key, value)
 	}
+}
+
+// GetOutputStream returns an output stream for the specified filename
+// If the filename is empty, the standard output stream is returned
+// If the append flag is true, the file is opened for appending
+// If the append flag is false, the file is opened for writing
+func GetOutputStream(filename string, append bool) (*os.File, error) {
+	// fileMode controls how the file is opened
+	var fileMode int
+
+	// If no filename is specified, use standard output
+	if filename == "" {
+		return os.Stdout, nil
+	}
+
+	if append {
+		// If append is true, append to the file
+		fileMode = os.O_CREATE | os.O_WRONLY | os.O_APPEND
+	} else {
+		// If append is false, overwrite the file
+		fileMode = os.O_CREATE | os.O_WRONLY | os.O_TRUNC
+	}
+
+	// Open the file for writing using the specified file mode
+	outStream, err := os.OpenFile(filename, fileMode, 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	// Return the output stream
+	return outStream, nil
 }

@@ -19,22 +19,21 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package debug
+package utils
 
 import (
-	"fmt"
-	"os"
-
-	"github.com/bitcanon/iptool/utils"
+	"strings"
+	"time"
 )
 
-// PrintConfigDebug prints full debug information about the configuration file
-// and the variables set in the environment
-func PrintConfigDebug() {
-	// Get and print the default config file path
-	utils.PrintConfigInfo()
-	fmt.Println()
+// GetTime returns the current time as a string
+func GetTimestamp() string {
+	// Get the current time as a string
+	currentTime := time.Now().Format("2006-01-02 15:04:05.999999999")
 
-	// Print all configuration variables
-	utils.PrintVariables(os.Stdout, utils.All)
+	// Add zeros to the end of the string if it is shorter than 27 characters
+	currentTime += strings.Repeat("0", 27-len(currentTime))
+
+	// Return the current time
+	return currentTime
 }
