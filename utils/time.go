@@ -29,10 +29,13 @@ import (
 // GetTime returns the current time as a string
 func GetTimestamp() string {
 	// Get the current time as a string
-	currentTime := time.Now().Format("2006-01-02 15:04:05.999999999")
+	currentTime := time.Now().Format("2006-01-02 15:04:05.9999999")
 
 	// Add zeros to the end of the string if it is shorter than 27 characters
-	currentTime += strings.Repeat("0", 27-len(currentTime))
+	currentTimeLen := len(currentTime)
+	if currentTimeLen < 27 {
+		currentTime += strings.Repeat("0", 27-currentTimeLen)
+	}
 
 	// Return the current time
 	return currentTime
