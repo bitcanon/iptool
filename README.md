@@ -118,6 +118,16 @@ iptool tcp ping www.github.com -c 5
 ```
 ![iptool-tcp-ping](docs/img/iptool-tcp-ping.gif)
 
+#### CSV Export
+
+Use the CSV export functionality to simplify further analysis in another tool:
+
+```bash
+iptool tcp ping www.github.com --csv -o github.csv
+```
+
+![iptool-tcp-ping-csv](docs/img/iptool-tcp-ping-csv.gif)
+
 For more details on the `iptool tcp ping` command, please refer to the [TCP Ping Command](https://github.com/bitcanon/iptool/wiki/iptool-tcp-ping) documentation.
 
 ## Configuration
