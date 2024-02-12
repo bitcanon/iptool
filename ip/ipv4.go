@@ -24,6 +24,7 @@ package ip
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"regexp"
 	"strconv"
@@ -76,7 +77,6 @@ func (ip *IPv4) Wildcard() string {
 
 	// Convert the integer to dotted-decimal notation
 	dottedDecimal := fmt.Sprintf("%d.%d.%d.%d",
-
 		(hexInt>>24)&0xFF^0xFF,
 		(hexInt>>16)&0xFF^0xFF,
 		(hexInt>>8)&0xFF^0xFF,
@@ -86,7 +86,7 @@ func (ip *IPv4) Wildcard() string {
 	return dottedDecimal
 }
 
-// Network is a function that returns the network address in the network
+// Network is a function that returns the network address of the network
 func (ip *IPv4) Network() string {
 	return ip.Net.IP.String()
 }
@@ -438,4 +438,74 @@ func IPv4ToDecimal(ipStr string) string {
 	}
 
 	return fmt.Sprintf("%d", decimalIP)
+}
+
+// IPv4ToInt is a function that takes an IPv4 address in dotted-decimal
+// notation as input and returns the IP address in decimal notation (integer).
+func IPv4ToInt(ipStr string) uint32 {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return 0
+	}
+
+	ip = ip.To4()
+	if ip == nil {
+		return 0
+	}
+
+	decimalIP := uint32(0)
+	for _, byteValue := range ip {
+		decimalIP = decimalIP*256 + uint32(byteValue)
+	}
+
+	return decimalIP
+}
+
+// IntToIPv4 is a function that takes an IP address in decimal notation (integer)
+// as input and returns the IP address in dotted-decimal notation.
+func IntToIPv4(ipInt uint32) string {
+	ip := make(net.IP, 4)
+	ip[0] = byte(ipInt >> 24)
+	ip[1] = byte(ipInt >> 16)
+	ip[2] = byte(ipInt >> 8)
+	ip[3] = byte(ipInt)
+	return ip.String()
+}
+
+// Split is a function that takes an IPv4 address and a number of bits as input
+// and returns a list of subnets as output.
+func (ip *IPv4) Split(bits int) ([]*IPv4, error) {
+	// Make sure that the number of bits is greater than or equal to the prefix length
+	if ip.PrefixLength() > bits {
+		return nil, fmt.Errorf("the number of bits must be greater than or equal to the prefix length")
+	}
+
+	// Calculate the size of the subnets as defined by the number of bits
+	subnetSize := int(math.Pow(2, float64(32-bits)))
+
+	// Print the number of subnets
+	subnetCount := int(ip.NetworkSize()) / subnetSize
+
+	// Get the first subnet in the range
+	startSubnet := IPv4ToInt(ip.Network())
+
+	// List of subnets
+	subnets := make([]*IPv4, subnetCount)
+	err := error(nil)
+
+	// Iterate over the subnets
+	for i := 0; i < subnetCount; i++ {
+		increment := uint32(i * subnetSize)
+		// Convert the subnet to dotted-decimal notation
+		subnet := IntToIPv4(startSubnet + increment)
+		// fmt.Printf("Subnet: %s/%d\n", subnet, bits)
+
+		// Parse the subnet
+		subnets[i], err = ParseIPv4(fmt.Sprintf("%s/%d", subnet, bits))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return subnets, nil
 }
