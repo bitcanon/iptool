@@ -122,10 +122,24 @@ func subnetSplitAction(out io.Writer, s string) error {
 	// Create a string of dashes of the total length
 	dashLine := strings.Repeat("-", totalLength)
 
+	// Determine the output file using Viper
+	outputFile := viper.GetString("subnet.split.output-file")
+
+	// Get the output stream
+	outputStream, err := utils.GetOutputStream(outputFile, false)
+	if err != nil {
+		return err
+	}
+	defer outputStream.Close()
+
 	// Print the subnets
 	// Start with the header (Prefix, Network, Broadcast, First, Last, Hosts)
-	fmt.Fprintf(out, fmtString, "Prefix", "Network", "First", "Last", "Broadcast", "Hosts")
-	fmt.Println(dashLine)
+	if viper.GetBool("subnet.split.csv") {
+		fmt.Fprintf(outputStream, "prefix,network,first,last,broadcast,hosts\n")
+	} else {
+		fmt.Fprintf(outputStream, fmtString, "Prefix", "Network", "First", "Last", "Broadcast", "Hosts")
+		fmt.Fprintf(outputStream, dashLine+"\n")
+	}
 	for _, prefix := range prefixList {
 		pfx := prefix.String()
 		network := prefix.Network()
@@ -134,7 +148,11 @@ func subnetSplitAction(out io.Writer, s string) error {
 		last := prefix.LastHost()
 		hosts := prefix.UsableHosts()
 
-		fmt.Fprintf(out, fmtString, pfx, network, first, last, broadcast, fmt.Sprint(hosts))
+		if viper.GetBool("subnet.split.csv") {
+			fmt.Fprintf(outputStream, "%s,%s,%s,%s,%s,%s\n", pfx, network, first, last, broadcast, fmt.Sprint(hosts))
+		} else {
+			fmt.Fprintf(outputStream, fmtString, pfx, network, first, last, broadcast, fmt.Sprint(hosts))
+		}
 	}
 
 	// Print the configuration debug if the --debug flag is set
@@ -155,4 +173,12 @@ func init() {
 	// Define the flag for specifying the number of subnets to split the network into
 	subnetSplitCmd.Flags().IntP("networks", "n", 0, "number of subnets to divide the network into")
 	viper.BindPFlag("subnet.split.networks", subnetSplitCmd.Flags().Lookup("networks"))
+
+	// Define the flag for allowing the user to output in CSV format
+	subnetSplitCmd.Flags().BoolP("csv", "c", false, "output in CSV format")
+	viper.BindPFlag("subnet.split.csv", subnetSplitCmd.Flags().Lookup("csv"))
+
+	// Define the flag for allowing the user to output to a file
+	subnetSplitCmd.Flags().StringP("output-file", "o", "", "write output to file")
+	viper.BindPFlag("subnet.split.output-file", subnetSplitCmd.Flags().Lookup("output-file"))
 }
