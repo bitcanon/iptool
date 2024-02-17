@@ -13,7 +13,7 @@ func TestClosestLargerPowerOfTwo2(t *testing.T) {
 	testCases := []struct {
 		name     string
 		input    int
-		expected int
+		expected uint32
 	}{
 		{name: "Zero", input: 0, expected: 1},
 		{name: "One", input: 1, expected: 1},

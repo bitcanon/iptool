@@ -24,11 +24,13 @@ package cmd
 import (
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strings"
 
 	"github.com/bitcanon/iptool/debug"
 	"github.com/bitcanon/iptool/ip"
+	"github.com/bitcanon/iptool/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -65,7 +67,32 @@ func subnetSplitAction(out io.Writer, s string) error {
 
 	// Parse the network count and bits from the configuration
 	bits := viper.GetInt("subnet.split.bits")
-	// networks := viper.GetInt("subnet.split.networks")
+	networks := viper.GetInt("subnet.split.networks")
+
+	// If both bits and networks are specified, return an error
+	if bits > 0 && networks > 0 {
+		return fmt.Errorf("both --bits and --networks cannot be specified at the same time, see --help for more information")
+	}
+
+	// If neither bits nor networks are specified, return an error
+	if bits == 0 && networks == 0 {
+		return fmt.Errorf("either --bits or --networks must be specified, see --help for more information")
+	}
+
+	// If the number of networks is specified, calculate the number of bits required
+	if networks > 0 {
+		// Calculate the number of networks closest to a power of two (2, 4, 8, 16, 32, 64, 128, 256, ...)
+		subnets := utils.ClosestLargerPowerOfTwo(networks)
+
+		// Calculate the number of addresses in each subnet
+		subnetSize := network.NetworkSize() / subnets
+
+		// Calculate the number of host bits in each subnet
+		hostBits := int(math.Log2(float64(subnetSize)))
+
+		// Calculate the number of network bits
+		bits = 32 - hostBits
+	}
 
 	// Split the subnet into smaller subnets
 	prefixList, err := network.Split(bits)
@@ -122,7 +149,7 @@ func init() {
 	subnetCmd.AddCommand(subnetSplitCmd)
 
 	// Define the flag for specifying the size of the subnets
-	subnetSplitCmd.Flags().IntP("bits", "b", 30, "subnet size in bits for network division")
+	subnetSplitCmd.Flags().IntP("bits", "b", 0, "subnet size in bits for network division")
 	viper.BindPFlag("subnet.split.bits", subnetSplitCmd.Flags().Lookup("bits"))
 
 	// Define the flag for specifying the number of subnets to split the network into

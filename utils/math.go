@@ -24,7 +24,7 @@ package utils
 import "math"
 
 // ClosestLargerPowerOfTwo returns the smallest power of 2 that is greater than or equal to n.
-func ClosestLargerPowerOfTwo(n int) int {
+func ClosestLargerPowerOfTwo(n int) uint32 {
 	// The smallest power of 2 greater than or equal to any number less than 1 is 1 (2^0)
 	if n < 1 {
 		return 1
@@ -37,5 +37,5 @@ func ClosestLargerPowerOfTwo(n int) int {
 	ceilLog2 := math.Ceil(log2)
 
 	// Convert back to int and raise 2 to this power
-	return int(math.Pow(2, ceilLog2))
+	return uint32(math.Pow(2, ceilLog2))
 }
