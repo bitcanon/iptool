@@ -34,7 +34,7 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Version: "1.1.0",
+	Version: "1.2.0",
 	Use:     "iptool",
 	Short:   "Simplify IP address and subnet tasks on the command line",
 	Long: `Simplify IP address and subnet tasks on the command line.

@@ -1,5 +1,5 @@
 /*
-Copyright © 2024 Mikael Schultz <bitcanon@proton.me>
+Copyright © 2024 Mikael Schultz <mikael@conf-t.se>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -43,6 +43,7 @@ var subnetSplitCmd = &cobra.Command{
 
 Examples:
   iptool subnet split 10.0.0.0/24 --bits 30
+  iptool subnet split 10.0.0.0/8 --bits 16 --limit 10
   iptool subnet split 10.0.0.0 255.255.255.0 --networks 4`,
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
