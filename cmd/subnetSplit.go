@@ -140,6 +140,11 @@ func subnetSplitAction(out io.Writer, s string) error {
 		fmt.Fprintf(outputStream, fmtString, "Prefix", "Network", "First", "Last", "Broadcast", "Hosts")
 		fmt.Fprintf(outputStream, dashLine+"\n")
 	}
+
+	// Subnet counter
+	counter := 1
+	limit := viper.GetInt("subnet.split.limit")
+
 	for _, prefix := range prefixList {
 		pfx := prefix.String()
 		network := prefix.Network()
@@ -147,6 +152,12 @@ func subnetSplitAction(out io.Writer, s string) error {
 		first := prefix.FirstHost()
 		last := prefix.LastHost()
 		hosts := prefix.UsableHosts()
+
+		// Limit the output to the specified number of subnets
+		if limit > 0 && counter > limit {
+			break
+		}
+		counter++
 
 		if viper.GetBool("subnet.split.csv") {
 			fmt.Fprintf(outputStream, "%s,%s,%s,%s,%s,%s\n", pfx, network, first, last, broadcast, fmt.Sprint(hosts))
@@ -181,4 +192,8 @@ func init() {
 	// Define the flag for allowing the user to output to a file
 	subnetSplitCmd.Flags().StringP("output-file", "o", "", "write output to file")
 	viper.BindPFlag("subnet.split.output-file", subnetSplitCmd.Flags().Lookup("output-file"))
+
+	// Define the flag for allowing the user to limit the output to a specific number of subnets
+	subnetSplitCmd.Flags().IntP("limit", "l", 0, "limit the number of subnets in the output")
+	viper.BindPFlag("subnet.split.limit", subnetSplitCmd.Flags().Lookup("limit"))
 }
